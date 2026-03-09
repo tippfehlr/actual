@@ -125,8 +125,8 @@ export function uncategorizedTransactions() {
     category: null,
     $or: [
       {
-        'payee.transfer_acct.offbudget': true,
-        'payee.transfer_acct': null,
+        'transfer_acct.offbudget': true,
+        'transfer_acct': null
       },
     ],
   });
