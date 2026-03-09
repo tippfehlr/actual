@@ -3,12 +3,6 @@ import * as db from '../db';
 
 import { runRules } from './transaction-rules';
 
-async function getPayee(acct) {
-  return db.first<db.DbPayee>('SELECT * FROM payees WHERE transfer_acct = ?', [
-    acct,
-  ]);
-}
-
 async function getTransferredAccountFromPayee(transaction) {
   if (transaction.payee) {
     const result = await db.first<Pick<db.DbViewPayee, 'transfer_acct'>>(
@@ -63,15 +57,10 @@ export async function addTransfer(transaction, transferredAccount) {
     return null;
   }
 
-  const { id: fromPayee } = await db.first<Pick<db.DbPayee, 'id'>>(
-    'SELECT id FROM payees WHERE transfer_acct = ?',
-    [transaction.account],
-  );
-
   const transferTransaction = {
     account: transferredAccount,
     amount: -transaction.amount,
-    payee: fromPayee,
+    payee: transaction.payee,
     date: transaction.date,
     transfer_id: transaction.id,
     transfer_acct: transaction.account,
@@ -136,15 +125,11 @@ export async function removeTransfer(transaction) {
 }
 
 export async function updateTransfer(transaction, transferredAccount) {
-  const payee = await getPayee(transaction.account);
-
   await db.updateTransaction({
     id: transaction.transfer_id,
     account: transferredAccount,
-    // Make sure to update the payee on the other side in case the
-    // user moved this transaction into another account
-    payee: payee.id,
     transfer_acct: transaction.account,
+    payee: transaction.payee,
     date: transaction.date,
     notes: transaction.notes,
     amount: -transaction.amount,
