@@ -716,6 +716,7 @@ function PayeeCell({
           accounts={accounts}
           value={payee?.id ?? null}
           shouldSaveFromKey={shouldSaveFromKey}
+          showMakeTransfer={false}
           inputProps={{
             onBlur,
             onKeyDown,
@@ -1071,10 +1072,9 @@ const Transaction = memo(function Transaction({
   const account = accounts && accountId && getAccountsById(accounts)[accountId];
 
   const isChild = transaction.is_child;
-  const transferAcct =
-    isTemporaryId(id) && payee?.transfer_acct
-      ? getAccountsById(accounts)[payee.transfer_acct]
-      : transferAccountsByTransaction[id];
+  const transferAcct = transaction.transfer_acct
+    ? getAccountsById(accounts)[transaction.transfer_acct] || null
+    : null;
   const isBudgetTransfer = transferAcct && transferAcct.offbudget === 0;
   const isOffBudget = account && account.offbudget === 1;
 
@@ -1210,7 +1210,7 @@ const Transaction = memo(function Transaction({
         <Field
           /* Transfer blank placeholder for Child transaction */
           style={{
-            width: 120,
+            width: 180,
             backgroundColor: theme.tableRowBackgroundHover,
             border: 0,
           }}
@@ -1350,21 +1350,18 @@ const Transaction = memo(function Transaction({
           id={id}
           payee={payee}
           focused={focusedField === 'payee'}
-          /* Filter out the account we're currently in as it is not a valid transfer */
-          accounts={accounts.filter(account => account.id !== accountId)}
+          accounts={accounts}
           payees={payees.filter(
-            payee => !payee.transfer_acct || payee.transfer_acct !== accountId,
+            payee => !payee.transfer_acct,
           )}
           valueStyle={valueStyle}
           transaction={transaction}
-          transferAccountsByTransaction={transferAccountsByTransaction}
           importedPayee={importedPayee}
           isPreview={isPreview}
           onEdit={onEdit}
           onUpdate={onUpdate}
           onCreatePayee={onCreatePayee}
           onManagePayees={onManagePayees}
-          onNavigateToTransferAccount={onNavigateToTransferAccount}
           onNavigateToSchedule={onNavigateToSchedule}
         />
       ))()}
@@ -1388,66 +1385,79 @@ const Transaction = memo(function Transaction({
       />
 
       {!isChild && (
-        <Cell
+        <CustomCell
           /* Transfer account field */
           name="transfer"
           width={180}
-          plain
-          style={{ padding: 0 }}
-        >
-          {transferAcct ? (
-            <CellButton
-              bare
-              style={{
-                alignSelf: 'stretch',
-                borderRadius: 4,
-                border: '1px solid transparent',
-                ':hover': isPreview
-                  ? {}
-                  : {
-                      border: '1px solid ' + theme.buttonNormalBorder,
-                    },
-              }}
-              disabled={isPreview}
-              onSelect={() => {
-                if (!isTemporaryId(transaction.id)) {
-                  onNavigateToTransferAccount(transferAcct.id);
-                }
-              }}
-            >
+          textAlign="flex"
+          value={transferAcct?.id}
+          valueStyle={valueStyle}
+          exposed={focusedField === 'transfer'}
+          onExpose={name => !isPreview && onEdit(id, name)}
+          onUpdate={async value => {
+            onUpdate('transfer_acct', value || undefined);
+          }}
+          formatter={() => {
+            if (!transferAcct) return '';
+            return transferAcct.name;
+          }}
+          unexposedContent={props =>
+            transferAcct ? (
               <View
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  alignSelf: 'stretch',
-                  borderRadius: 4,
                   flex: 1,
-                  padding: 4,
+                  overflow: 'hidden',
                 }}
               >
                 {amount > 0 ? (
                   <SvgLeftArrow2
-                    style={{ width: 10, height: 10, marginRight: 5, flexShrink: 0 }}
+                    style={{
+                      width: 10,
+                      height: 10,
+                      marginRight: 5,
+                      flexShrink: 0,
+                    }}
                   />
                 ) : (
                   <SvgRightArrow2
-                    style={{ width: 10, height: 10, marginRight: 5, flexShrink: 0 }}
+                    style={{
+                      width: 10,
+                      height: 10,
+                      marginRight: 5,
+                      flexShrink: 0,
+                    }}
                   />
                 )}
-                <Text
-                  style={{
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    ...(valueStyle || {}),
-                  }}
-                >
-                  {transferAcct.name}
-                </Text>
+                <UnexposedCellContent {...props} />
               </View>
-            </CellButton>
-          ) : null}
-        </Cell>
+            ) : (
+              <UnexposedCellContent {...props} />
+            )
+          }
+        >
+          {({
+            onBlur,
+            onKeyDown,
+            onUpdate,
+            onSave,
+            shouldSaveFromKey,
+            inputStyle,
+          }) => (
+            <AccountAutocomplete
+              includeClosedAccounts={false}
+              value={transferAcct?.id ?? null}
+              hiddenAccounts={accountId ? [accountId] : undefined}
+              shouldSaveFromKey={shouldSaveFromKey}
+              clearOnBlur={false}
+              focused
+              inputProps={{ onBlur, onKeyDown, style: inputStyle }}
+              onUpdate={onUpdate}
+              onSelect={onSave}
+            />
+          )}
+        </CustomCell>
       )}
 
       {(isPreview && !isChild) || isParent ? (
@@ -2498,7 +2508,6 @@ export const TransactionTable = forwardRef(
         return {};
       }
       const accounts = getAccountsById(props.accounts);
-      const payees = getPayeesById(props.payees);
 
       return Object.fromEntries(
         props.transactions.map(t => {
@@ -2506,13 +2515,12 @@ export const TransactionTable = forwardRef(
             return [t.id, null];
           }
 
-          const payee = (t.payee && payees[t.payee]) || undefined;
           const transferAccount =
-            payee?.transfer_acct && accounts[payee.transfer_acct];
+            t.transfer_acct && accounts[t.transfer_acct];
           return [t.id, transferAccount || null];
         }),
       );
-    }, [props.transactions, props.payees, props.accounts]);
+    }, [props.transactions, props.accounts]);
 
     const hasPrevSplitsExpanded = prevSplitsExpanded.current;
 
@@ -2619,6 +2627,7 @@ export const TransactionTable = forwardRef(
         'account',
         'payee',
         'notes',
+        'transfer',
         'category',
         'debit',
         'credit',
@@ -2637,6 +2646,7 @@ export const TransactionTable = forwardRef(
         'account',
         'payee',
         'notes',
+        'transfer',
         'category',
         'debit',
         'credit',

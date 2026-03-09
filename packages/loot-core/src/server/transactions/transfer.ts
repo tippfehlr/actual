@@ -9,7 +9,7 @@ async function getPayee(acct) {
   ]);
 }
 
-async function getTransferredAccount(transaction) {
+async function getTransferredAccountFromPayee(transaction) {
   if (transaction.payee) {
     const result = await db.first<Pick<db.DbViewPayee, 'transfer_acct'>>(
       'SELECT transfer_acct FROM v_payees WHERE id = ?',
@@ -19,6 +19,16 @@ async function getTransferredAccount(transaction) {
     return result?.transfer_acct || null;
   }
   return null;
+}
+
+async function getTransferredAccount(transaction) {
+  // Prefer the explicit transfer_acct field on the transaction
+  if (transaction.transfer_acct) {
+    return transaction.transfer_acct;
+  }
+  // Fall back to payee-based detection (for backwards compatibility,
+  // e.g. bank sync imports that set transfer payees)
+  return getTransferredAccountFromPayee(transaction);
 }
 
 async function clearCategory(transaction, transferAcct) {
@@ -168,7 +178,10 @@ export async function onDelete(transaction) {
 }
 
 export async function onUpdate(transaction) {
-  const transferredAccount = await getTransferredAccount(transaction);
+  // For updates, only use the explicit transfer_acct field.
+  // This decouples transfers from payees — changing the payee
+  // does not affect transfer state.
+  const transferredAccount = transaction.transfer_acct || null;
 
   if (transaction.is_parent) {
     return removeTransfer(transaction);
