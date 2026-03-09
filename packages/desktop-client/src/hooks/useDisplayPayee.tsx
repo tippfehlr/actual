@@ -4,12 +4,10 @@ import { useTranslation } from 'react-i18next';
 
 import { q } from 'loot-core/shared/query';
 import type {
-  AccountEntity,
   PayeeEntity,
   TransactionEntity,
 } from 'loot-core/types/models';
 
-import { useAccounts } from './useAccounts';
 import { usePayeesById } from './usePayees';
 import { useTransactions } from './useTransactions';
 
@@ -43,7 +41,6 @@ export function DisplayPayeeProvider({
     options: { pageSize: transactions.length * 5 },
   });
 
-  const { data: accounts = [] } = useAccounts();
   const { data: payeesById = {} } = usePayeesById();
 
   const displayPayees = useMemo(() => {
@@ -58,9 +55,6 @@ export function DisplayPayeeProvider({
             t,
             transaction,
             payee: payeesById[transaction?.payee || ''],
-            transferAccount: accounts.find(
-              a => a.id === payeesById[transaction?.payee || '']?.transfer_acct,
-            ),
           });
 
           return acc;
@@ -107,11 +101,6 @@ export function DisplayPayeeProvider({
           t,
           transaction: mostCommonPayeeTransaction,
           payee: mostCommonPayee,
-          transferAccount: accounts.find(
-            a =>
-              a.id ===
-              payeesById[mostCommonPayeeTransaction.payee || '']?.transfer_acct,
-          ),
           numHiddenPayees: numDistinctPayees - 1,
         });
 
@@ -119,7 +108,7 @@ export function DisplayPayeeProvider({
       },
       {} as Record<TransactionEntity['id'], string>,
     );
-  }, [transactions, allSubtransactions, payeesById, accounts, t]);
+  }, [transactions, allSubtransactions, payeesById, t]);
 
   return (
     <DisplayPayeeContext.Provider value={{ displayPayees }}>
@@ -154,7 +143,6 @@ type GetPrettyPayeeProps = {
   t: ReturnType<typeof useTranslation>['t'];
   transaction?: TransactionEntity | undefined;
   payee?: PayeeEntity | undefined;
-  transferAccount?: AccountEntity | undefined;
   numHiddenPayees?: number | undefined;
 };
 
@@ -162,7 +150,6 @@ function getPrettyPayee({
   t,
   transaction,
   payee,
-  transferAccount,
   numHiddenPayees = 0,
 }: GetPrettyPayeeProps) {
   if (!transaction) {
@@ -178,9 +165,7 @@ function getPrettyPayee({
 
   const { payee: payeeId } = transaction;
 
-  if (transferAccount) {
-    return formatPayeeName(transferAccount.name);
-  } else if (payee) {
+  if (payee) {
     return formatPayeeName(payee.name);
   } else if (payeeId && payeeId.startsWith('new:')) {
     return formatPayeeName(payeeId.slice('new:'.length));

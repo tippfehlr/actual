@@ -266,6 +266,13 @@ const TransactionHeader = memo(
             onSort('notes', selectAscDesc(field, ascDesc, 'notes', 'asc'))
           }
         />
+        <HeaderCell
+          value={t('Transfer')}
+          width={180}
+          alignItems="flex"
+          marginLeft={-5}
+          id="transfer"
+        />
         {showCategory && (
           <HeaderCell
             value={t('Category')}
@@ -486,9 +493,6 @@ type PayeeCellProps = {
   focused: boolean;
   payees: PayeeEntity[];
   accounts: AccountEntity[];
-  transferAccountsByTransaction: {
-    [id: TransactionEntity['id']]: AccountEntity | null;
-  };
   valueStyle: CSSProperties | null;
   transaction: SerializedTransaction;
   importedPayee?: PayeeEntity['id'];
@@ -497,7 +501,6 @@ type PayeeCellProps = {
   onUpdate: TransactionUpdateFunction;
   onCreatePayee: (name: string) => Promise<null | PayeeEntity['id']>;
   onManagePayees: (id: PayeeEntity['id'] | undefined) => void;
-  onNavigateToTransferAccount: (id: AccountEntity['id']) => void;
   onNavigateToSchedule: (id: ScheduleEntity['id']) => void;
 };
 
@@ -507,7 +510,6 @@ function PayeeCell({
   focused,
   payees,
   accounts,
-  transferAccountsByTransaction,
   valueStyle,
   transaction,
   importedPayee,
@@ -516,15 +518,12 @@ function PayeeCell({
   onUpdate,
   onCreatePayee,
   onManagePayees,
-  onNavigateToTransferAccount,
   onNavigateToSchedule,
 }: PayeeCellProps) {
   const isCreatingPayee = useRef(false);
   const { t } = useTranslation();
 
   const dispatch = useDispatch();
-
-  const transferAccount = transferAccountsByTransaction[transaction.id];
 
   const displayPayee = useDisplayPayee({ transaction });
 
@@ -577,8 +576,6 @@ function PayeeCell({
         >
           <PayeeIcons
             transaction={transaction}
-            transferAccount={transferAccount}
-            onNavigateToTransferAccount={onNavigateToTransferAccount}
             onNavigateToSchedule={onNavigateToSchedule}
           />
           <SvgSplit
@@ -670,8 +667,6 @@ function PayeeCell({
           <>
             <PayeeIcons
               transaction={transaction}
-              transferAccount={transferAccount}
-              onNavigateToTransferAccount={onNavigateToTransferAccount}
               onNavigateToSchedule={onNavigateToSchedule}
             />
             <div
@@ -746,19 +741,14 @@ const payeeIconButtonStyle = {
   color: 'inherit',
 };
 const scheduleIconStyle = { width: 13, height: 13 };
-const transferIconStyle = { width: 10, height: 10 };
 
 type PayeeIconsProps = {
   transaction: SerializedTransaction;
-  transferAccount: AccountEntity | null;
-  onNavigateToTransferAccount: (id: AccountEntity['id']) => void;
   onNavigateToSchedule: (id: ScheduleEntity['id']) => void;
 };
 
 function PayeeIcons({
   transaction,
-  transferAccount,
-  onNavigateToTransferAccount,
   onNavigateToSchedule,
 }: PayeeIconsProps) {
   const { t } = useTranslation();
@@ -772,8 +762,7 @@ function PayeeIcons({
 
   const schedule = scheduleId ? schedules.find(s => s.id === scheduleId) : null;
 
-  if (schedule == null && transferAccount == null) {
-    // Neither a valid scheduled transaction nor a transfer.
+  if (schedule == null) {
     return null;
   }
 
@@ -782,49 +771,25 @@ function PayeeIcons({
     schedule._date &&
     typeof schedule._date === 'object' &&
     !!schedule._date.frequency;
-  const isDeposit = transaction.amount > 0;
 
   return (
-    <>
-      {schedule && (
-        <Button
-          variant="bare"
-          data-testid="schedule-icon"
-          aria-label={t('See schedule details')}
-          style={payeeIconButtonStyle}
-          onPress={() => {
-            if (scheduleId) {
-              onNavigateToSchedule(scheduleId);
-            }
-          }}
-        >
-          {recurring ? (
-            <SvgArrowsSynchronize style={scheduleIconStyle} />
-          ) : (
-            <SvgCalendar3 style={scheduleIconStyle} />
-          )}
-        </Button>
+    <Button
+      variant="bare"
+      data-testid="schedule-icon"
+      aria-label={t('See schedule details')}
+      style={payeeIconButtonStyle}
+      onPress={() => {
+        if (scheduleId) {
+          onNavigateToSchedule(scheduleId);
+        }
+      }}
+    >
+      {recurring ? (
+        <SvgArrowsSynchronize style={scheduleIconStyle} />
+      ) : (
+        <SvgCalendar3 style={scheduleIconStyle} />
       )}
-      {transferAccount && (
-        <Button
-          variant="bare"
-          data-testid="transfer-icon"
-          aria-label={t('See transfer account')}
-          style={payeeIconButtonStyle}
-          onPress={() => {
-            if (!isTemporaryId(transaction.id)) {
-              onNavigateToTransferAccount(transferAccount.id);
-            }
-          }}
-        >
-          {isDeposit ? (
-            <SvgLeftArrow2 style={transferIconStyle} />
-          ) : (
-            <SvgRightArrow2 style={transferIconStyle} />
-          )}
-        </Button>
-      )}
-    </>
+    </Button>
   );
 }
 
@@ -1241,6 +1206,17 @@ const Transaction = memo(function Transaction({
         />
       )}
 
+      {isChild && (
+        <Field
+          /* Transfer blank placeholder for Child transaction */
+          style={{
+            width: 120,
+            backgroundColor: theme.tableRowBackgroundHover,
+            border: 0,
+          }}
+        />
+      )}
+
       {/* Checkmark - for Child transaction
       between normal Date and Payee or Account and Payee if needed */}
       {isTemporaryId(transaction.id) ? (
@@ -1410,6 +1386,69 @@ const Transaction = memo(function Transaction({
           onUpdate: onUpdate.bind(null, 'notes'),
         }}
       />
+
+      {!isChild && (
+        <Cell
+          /* Transfer account field */
+          name="transfer"
+          width={180}
+          plain
+          style={{ padding: 0 }}
+        >
+          {transferAcct ? (
+            <CellButton
+              bare
+              style={{
+                alignSelf: 'stretch',
+                borderRadius: 4,
+                border: '1px solid transparent',
+                ':hover': isPreview
+                  ? {}
+                  : {
+                      border: '1px solid ' + theme.buttonNormalBorder,
+                    },
+              }}
+              disabled={isPreview}
+              onSelect={() => {
+                if (!isTemporaryId(transaction.id)) {
+                  onNavigateToTransferAccount(transferAcct.id);
+                }
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  alignSelf: 'stretch',
+                  borderRadius: 4,
+                  flex: 1,
+                  padding: 4,
+                }}
+              >
+                {amount > 0 ? (
+                  <SvgLeftArrow2
+                    style={{ width: 10, height: 10, marginRight: 5, flexShrink: 0 }}
+                  />
+                ) : (
+                  <SvgRightArrow2
+                    style={{ width: 10, height: 10, marginRight: 5, flexShrink: 0 }}
+                  />
+                )}
+                <Text
+                  style={{
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    ...(valueStyle || {}),
+                  }}
+                >
+                  {transferAcct.name}
+                </Text>
+              </View>
+            </CellButton>
+          ) : null}
+        </Cell>
+      )}
 
       {(isPreview && !isChild) || isParent ? (
         <Cell
