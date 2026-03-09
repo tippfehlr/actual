@@ -25,6 +25,7 @@ exports[`Accounts > Transfers are properly updated 1`] = `
     "sort_order": 123456789,
     "starting_balance_flag": 0,
     "tombstone": 0,
+    "transfer_acct": "two",
     "transferred_id": "id2",
     "type": null,
   },
@@ -51,6 +52,7 @@ exports[`Accounts > Transfers are properly updated 1`] = `
     "sort_order": 123456789,
     "starting_balance_flag": 0,
     "tombstone": 0,
+    "transfer_acct": "one",
     "transferred_id": "test-transfer",
     "type": null,
   },
@@ -76,8 +78,14 @@ exports[`Accounts > Transfers are properly updated 2`] = `
       "id": "test-transfer",
       "imported_description": null,
       "isChild": 0,
-@@ -24,15 +24,15 @@
+@@ -20,20 +20,20 @@
+      "reconciled": 0,
+      "schedule": null,
+      "sort_order": 123456789,
+      "starting_balance_flag": 0,
       "tombstone": 0,
+-     "transfer_acct": "two",
++     "transfer_acct": "three",
       "transferred_id": "id2",
       "type": null,
     },
@@ -100,22 +108,24 @@ exports[`Accounts > Transfers are properly updated 3`] = `
 "- First value
 + Second value
 
-@@ -19,12 +19,12 @@
+@@ -19,13 +19,13 @@
       "raw_synced_data": null,
       "reconciled": 0,
       "schedule": null,
       "sort_order": 123456789,
       "starting_balance_flag": 0,
 -     "tombstone": 0,
+-     "transfer_acct": "three",
 -     "transferred_id": "id2",
 +     "tombstone": 1,
++     "transfer_acct": null,
 +     "transferred_id": null,
       "type": null,
     },
     Object {
       "acct": "three",
       "amount": -5000,
-@@ -45,10 +45,10 @@
+@@ -46,11 +46,11 @@
       "raw_synced_data": null,
       "reconciled": 0,
       "schedule": null,
@@ -123,6 +133,7 @@ exports[`Accounts > Transfers are properly updated 3`] = `
       "starting_balance_flag": 0,
 -     "tombstone": 0,
 +     "tombstone": 1,
+      "transfer_acct": "one",
       "transferred_id": "test-transfer",
       "type": null,
     },

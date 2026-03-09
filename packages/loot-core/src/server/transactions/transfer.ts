@@ -64,6 +64,7 @@ export async function addTransfer(transaction, transferredAccount) {
     payee: fromPayee,
     date: transaction.date,
     transfer_id: transaction.id,
+    transfer_acct: transaction.account,
     notes: transaction.notes || null,
     schedule: transaction.schedule,
     cleared: false,
@@ -81,6 +82,7 @@ export async function addTransfer(transaction, transferredAccount) {
   await db.updateTransaction({
     id: transaction.id,
     transfer_id: id,
+    transfer_acct: transferredAccount,
     ...(matchedSchedule ? { schedule: matchedSchedule } : {}),
   });
   const categoryCleared = await clearCategory(transaction, transferredAccount);
@@ -88,6 +90,7 @@ export async function addTransfer(transaction, transferredAccount) {
   return {
     id: transaction.id,
     transfer_id: id,
+    transfer_acct: transferredAccount,
     ...(categoryCleared ? { category: null } : {}),
   };
 }
@@ -107,14 +110,19 @@ export async function removeTransfer(transaction) {
       await db.updateTransaction({
         id: transaction.transfer_id,
         transfer_id: null,
+        transfer_acct: null,
         payee: null,
       });
     } else {
       await db.deleteTransaction({ id: transaction.transfer_id });
     }
   }
-  await db.updateTransaction({ id: transaction.id, transfer_id: null });
-  return { id: transaction.id, transfer_id: null };
+  await db.updateTransaction({
+    id: transaction.id,
+    transfer_id: null,
+    transfer_acct: null,
+  });
+  return { id: transaction.id, transfer_id: null, transfer_acct: null };
 }
 
 export async function updateTransfer(transaction, transferredAccount) {
@@ -126,10 +134,17 @@ export async function updateTransfer(transaction, transferredAccount) {
     // Make sure to update the payee on the other side in case the
     // user moved this transaction into another account
     payee: payee.id,
+    transfer_acct: transaction.account,
     date: transaction.date,
     notes: transaction.notes,
     amount: -transaction.amount,
     schedule: transaction.schedule,
+  });
+
+  // Update the transfer_acct on our side in case the target changed
+  await db.updateTransaction({
+    id: transaction.id,
+    transfer_acct: transferredAccount,
   });
 
   const categoryCleared = await clearCategory(transaction, transferredAccount);

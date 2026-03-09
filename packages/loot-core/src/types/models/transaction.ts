@@ -20,6 +20,7 @@ export type TransactionEntity = {
   imported_payee?: string;
   starting_balance_flag?: boolean;
   transfer_id?: TransactionEntity['id'];
+  transfer_acct?: AccountEntity['id'];
   sort_order?: number;
   cleared?: boolean;
   reconciled?: boolean;
