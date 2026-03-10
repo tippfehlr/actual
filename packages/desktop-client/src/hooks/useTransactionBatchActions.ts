@@ -490,24 +490,19 @@ export function useTransactionBatchActions() {
       const [fromTrans, toTrans] = transactions;
 
       if (transactions.length === 2 && validForTransfer(fromTrans, toTrans)) {
-        const fromPayee = payees.find(
-          p => p.transfer_acct === fromTrans.account,
-        );
-        const toPayee = payees.find(p => p.transfer_acct === toTrans.account);
-
         const changes = {
           updated: [
             {
               ...fromTrans,
               category: null,
-              payee: toPayee?.id,
               transfer_id: toTrans.id,
+              transfer_acct: toTrans.account,
             },
             {
               ...toTrans,
               category: null,
-              payee: fromPayee?.id,
               transfer_id: fromTrans.id,
+              transfer_acct: fromTrans.account,
             },
           ],
           runTransfers: false,
