@@ -32,7 +32,8 @@ type SelectedTransactionsButtonProps = {
       | 'payee'
       | 'notes'
       | 'category'
-      | 'cleared',
+      | 'cleared'
+      | 'transfer_acct',
     selectedIds: string[],
   ) => void;
   onLinkSchedule: (selectedIds: string[]) => void;
@@ -40,6 +41,7 @@ type SelectedTransactionsButtonProps = {
   onCreateRule: (selectedIds: string[]) => void;
   onRunRules: (selectedIds: string[]) => void;
   onSetTransfer: (selectedIds: string[]) => void;
+  onClearTransfer: (selectedIds: string[]) => void;
   onScheduleAction: (
     action: 'post-transaction' | 'post-transaction-today' | 'skip' | 'complete',
     selectedIds: TransactionEntity['id'][],
@@ -61,6 +63,7 @@ export function SelectedTransactionsButton({
   onCreateRule,
   onRunRules,
   onSetTransfer,
+  onClearTransfer,
   onScheduleAction,
   showMakeTransfer,
   onMakeAsSplitTransaction,
@@ -400,6 +403,8 @@ export function SelectedTransactionsButton({
               { name: 'category', text: t('Category'), key: 'C' } as const,
               { name: 'amount', text: t('Amount'), key: 'M' } as const,
               { name: 'cleared', text: t('Cleared'), key: 'L' } as const,
+              { name: 'transfer_acct', text: t('Set transfer') } as const,
+              { name: 'clear_transfer', text: t('Clear transfer') } as const,
             ]),
       ]}
       onSelect={name => {
@@ -445,6 +450,9 @@ export function SelectedTransactionsButton({
             break;
           case 'set-transfer':
             onSetTransfer(selectedIds);
+            break;
+          case 'clear_transfer':
+            onClearTransfer(selectedIds);
             break;
           default:
             // @ts-expect-error fix me

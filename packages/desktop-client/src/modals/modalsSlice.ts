@@ -257,6 +257,7 @@ export type Modal =
       name: 'payee-autocomplete';
       options: {
         onSelect: (payeeId: string) => void;
+        showMakeTransfer?: boolean;
         onClose?: () => void;
       };
     }

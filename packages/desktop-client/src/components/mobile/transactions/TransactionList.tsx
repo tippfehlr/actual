@@ -330,6 +330,7 @@ function SelectedTransactionsFloatingActionBar({
     onBatchLinkSchedule,
     onBatchUnlinkSchedule,
     onSetTransfer,
+    onBatchClearTransfer,
     onMerge,
   } = useTransactionBatchActions();
 
@@ -483,6 +484,21 @@ function SelectedTransactionsFloatingActionBar({
               getItemStyle={getMenuItemStyle}
               style={{ backgroundColor: theme.floatingActionBarBackground }}
               onMenuSelect={name => {
+                if (name === 'clear_transfer') {
+                  void onBatchClearTransfer?.({
+                    ids: selectedTransactionsArray,
+                    onSuccess: ids => {
+                      showUndoNotification({
+                        message: t(
+                          'Successfully cleared transfer of {{count}} transactions.',
+                          { count: ids.length },
+                        ),
+                      });
+                    },
+                  });
+                  setIsEditMenuOpen(false);
+                  return;
+                }
                 void onBatchEdit?.({
                   name,
                   ids: selectedTransactionsArray,
@@ -499,6 +515,10 @@ function SelectedTransactionsFloatingActionBar({
                         break;
                       case 'payee':
                         displayValue = payeesById[String(value)]?.name ?? value;
+                        break;
+                      case 'transfer_acct':
+                        displayValue =
+                          accountsById[String(value)]?.name ?? value;
                         break;
                       case 'amount':
                         displayValue = Number.isNaN(Number(value))
@@ -569,6 +589,14 @@ function SelectedTransactionsFloatingActionBar({
                 {
                   name: 'cleared',
                   text: t('Cleared'),
+                },
+                {
+                  name: 'transfer_acct',
+                  text: t('Set transfer'),
+                },
+                {
+                  name: 'clear_transfer',
+                  text: t('Clear transfer'),
                 },
               ]}
             />

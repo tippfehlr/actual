@@ -246,6 +246,9 @@ type AccountInternalProps = {
   accountsSyncing: string[];
   dispatch: AppDispatch;
   onSetTransfer: ReturnType<typeof useTransactionBatchActions>['onSetTransfer'];
+  onBatchClearTransfer: ReturnType<
+    typeof useTransactionBatchActions
+  >['onBatchClearTransfer'];
   onReopenAccount: (id: AccountEntity['id']) => void;
   onUpdateAccount: (account: AccountEntity) => void;
   onUnlinkAccount: (id: AccountEntity['id']) => void;
@@ -1362,6 +1365,13 @@ class AccountInternal extends PureComponent<
     );
   };
 
+  onClearTransfer = (ids: string[]) => {
+    void this.props.onBatchClearTransfer({
+      ids,
+      onSuccess: this.refetchTransactions,
+    });
+  };
+
   onConditionsOpChange = (value: 'and' | 'or') => {
     this.setState({ filterConditionsOp: value });
     this.setState({
@@ -1831,6 +1841,7 @@ class AccountInternal extends PureComponent<
                 onApplyFilter={this.onApplyFilter}
                 onScheduleAction={this.onScheduleAction}
                 onSetTransfer={this.onSetTransfer}
+                onClearTransfer={this.onClearTransfer}
                 onMakeAsSplitTransaction={this.onMakeAsSplitTransaction}
                 onMakeAsNonSplitTransactions={this.onMakeAsNonSplitTransactions}
                 onMergeTransactions={this.onMergeTransactions}
@@ -1930,6 +1941,7 @@ type AccountHackProps = Omit<
   | 'onBatchUnlinkSchedule'
   | 'onBatchDelete'
   | 'onSetTransfer'
+  | 'onBatchClearTransfer'
 >;
 
 function AccountHack(props: AccountHackProps) {
@@ -1942,6 +1954,7 @@ function AccountHack(props: AccountHackProps) {
     onBatchUnlinkSchedule,
     onBatchDelete,
     onSetTransfer,
+    onBatchClearTransfer,
   } = useTransactionBatchActions();
 
   return (
@@ -1954,6 +1967,7 @@ function AccountHack(props: AccountHackProps) {
       onBatchUnlinkSchedule={onBatchUnlinkSchedule}
       onBatchDelete={onBatchDelete}
       onSetTransfer={onSetTransfer}
+      onBatchClearTransfer={onBatchClearTransfer}
       {...props}
     />
   );

@@ -1395,7 +1395,7 @@ const Transaction = memo(function Transaction({
           exposed={focusedField === 'transfer'}
           onExpose={name => !isPreview && onEdit(id, name)}
           onUpdate={async value => {
-            onUpdate('transfer_acct', value || null);
+            onUpdate('transfer_acct', value || undefined);
           }}
           formatter={() => {
             if (!transferAcct) return '';

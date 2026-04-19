@@ -181,6 +181,7 @@ export function useTransactionBatchActions() {
           modal: {
             name: 'payee-autocomplete',
             options: {
+              showMakeTransfer: false,
               onSelect: payeeId => onChange(name, payeeId),
             },
           },
@@ -195,6 +196,19 @@ export function useTransactionBatchActions() {
             name: 'account-autocomplete',
             options: {
               onSelect: accountId => onChange(name, accountId),
+            },
+          },
+        }),
+      );
+    };
+
+    const pushTransferAccountAutocompleteModal = () => {
+      dispatch(
+        pushModal({
+          modal: {
+            name: 'account-autocomplete',
+            options: {
+              onSelect: accountId => onChange('transfer_acct', accountId),
             },
           },
         }),
@@ -246,7 +260,8 @@ export function useTransactionBatchActions() {
       name === 'amount' ||
       name === 'payee' ||
       name === 'account' ||
-      name === 'date'
+      name === 'date' ||
+      name === 'transfer_acct'
     ) {
       const reconciledTransactions = transactions.filter(t => t.reconciled);
       if (reconciledTransactions.length > 0) {
@@ -260,6 +275,8 @@ export function useTransactionBatchActions() {
                     pushPayeeAutocompleteModal();
                   } else if (name === 'account') {
                     pushAccountAutocompleteModal();
+                  } else if (name === 'transfer_acct') {
+                    pushTransferAccountAutocompleteModal();
                   } else {
                     pushEditField();
                   }
@@ -283,6 +300,8 @@ export function useTransactionBatchActions() {
       pushPayeeAutocompleteModal();
     } else if (name === 'account') {
       pushAccountAutocompleteModal();
+    } else if (name === 'transfer_acct') {
+      pushTransferAccountAutocompleteModal();
     } else {
       pushEditField();
     }
@@ -529,6 +548,57 @@ export function useTransactionBatchActions() {
     onSuccess();
   };
 
+  const onBatchClearTransfer = async ({
+    ids,
+    onSuccess,
+  }: BatchDeleteProps) => {
+    const onConfirmClear = async (ids: Array<TransactionEntity['id']>) => {
+      // Fetch the selected transactions to find their paired transfer transactions
+      const { data } = await aqlQuery(
+        q('transactions')
+          .filter({ id: { $oneof: ids } })
+          .select('*'),
+      );
+      const transactions = data as TransactionEntity[];
+
+      const updated: Array<{
+        id: string;
+        transfer_acct: null;
+        transfer_id: null;
+      }> = [];
+
+      for (const trans of transactions) {
+        // Clear the selected transaction
+        updated.push({
+          id: trans.id,
+          transfer_acct: null,
+          transfer_id: null,
+        });
+
+        // Also clear the paired (reverse) transfer transaction
+        if (trans.transfer_id) {
+          updated.push({
+            id: trans.transfer_id,
+            transfer_acct: null,
+            transfer_id: null,
+          });
+        }
+      }
+
+      const changes: Partial<Diff<TransactionEntity>> = {
+        updated: updated as unknown as Array<Partial<TransactionEntity>>,
+      };
+      await send('transactions-batch-update', changes);
+      onSuccess?.(ids);
+    };
+
+    await checkForReconciledTransactions(
+      ids,
+      'batchEditWithReconciled',
+      onConfirmClear,
+    );
+  };
+
   return {
     onBatchEdit,
     onBatchDuplicate,
@@ -536,6 +606,7 @@ export function useTransactionBatchActions() {
     onBatchLinkSchedule,
     onBatchUnlinkSchedule,
     onSetTransfer,
+    onBatchClearTransfer,
     onMerge,
   };
 }

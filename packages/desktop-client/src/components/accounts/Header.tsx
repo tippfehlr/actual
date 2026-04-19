@@ -118,6 +118,7 @@ type AccountHeaderProps = {
   | 'onCreateRule'
   | 'onScheduleAction'
   | 'onSetTransfer'
+  | 'onClearTransfer'
   | 'onMakeAsSplitTransaction'
   | 'onMakeAsNonSplitTransactions'
   | 'onMergeTransactions'
@@ -184,6 +185,7 @@ export function AccountHeader({
   onDeleteFilter,
   onScheduleAction,
   onSetTransfer,
+  onClearTransfer,
   onRunRules,
   onMakeAsSplitTransaction,
   onMakeAsNonSplitTransactions,
@@ -397,6 +399,7 @@ export function AccountHeader({
               onUnlinkSchedule={onBatchUnlinkSchedule}
               onCreateRule={onCreateRule}
               onSetTransfer={onSetTransfer}
+              onClearTransfer={onClearTransfer}
               onScheduleAction={onScheduleAction}
               showMakeTransfer={showMakeTransfer}
               onMakeAsSplitTransaction={onMakeAsSplitTransaction}
